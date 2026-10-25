@@ -325,7 +325,7 @@ void load_process_preferences(xpc_object_t preferencesXdict __attribute__((unuse
 
 	gTweakInjectionDisabled = !gChoicyActive;
 	os_log_dbg("Choicy active: %{public}s (forced=%{public}d jbApp=%{public}d explicit=%{public}d/%{public}d)",
-		gChoicyActive ? "yes" : "no", forced, jailbreakApp, hasExplicit, explicitEnabled);
+		gChoicyActive ? "yes" : "no", (int)forced, (int)jailbreakApp, (int)hasExplicit, (int)explicitEnabled);
 
 	// 本进程隐身时不再解析后续策略，避免留下任何可被探测的状态
 	if (!gChoicyActive) return;
@@ -512,7 +512,7 @@ bool should_load_dylib(const char *dylibPath)
 	// 否则 App 会因为缺少依赖库直接崩溃。
 	if (!gChoicyActive) {
 		if (string_has_suffix(dylibPath, "/usr/lib/ellekit/OldABI.dylib")) {
-			os_log_dbg("OldABI.dylib ❌ (choicy inactive)", "");
+			os_log_dbg("OldABI.dylib ❌ (choicy inactive)");
 			return false;
 		}
 		if (string_has_suffix(dylibPath, ".dylib") && dylib_is_tweak(dylibPath)) {
