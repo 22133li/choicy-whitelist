@@ -1,0 +1,107 @@
+name: Build Choicy-Whitelist (roothide)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install Theos
+        run: |
+          brew install ldid dpkg
+          echo "$(brew --prefix)/bin" >> $GITHUB_PATH
+          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
+          curl -sL https://github.com/theos/sdks/archive/master.tar.gz | tar -xz -C /tmp
+          sudo cp -r /tmp/sdks-master/*.sdk /opt/theos/sdks/ 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /opt/theos
+          ls /opt/theos/sdks/ | head -5
+
+      - name: Preflight checks
+        run: |
+          set -e
+          echo "=== roothide devkit ==="
+          ls roothide-devkit/roothide.h roothide-devkit/roothide/libroothide.tbd
+          echo "=== external deps ==="
+          ls external/litehook/src/litehook.h
+          ls external/ChOma/src | head -3
+          echo "=== patched code present ==="
+          grep -q "CHWhitelistPolicy.h" Tweak.c && echo "policy header wired"
+          grep -q "gChoicyActive" Tweak.c && echo "gChoicyActive present"
+          grep -q "CHWhitelistAppExistsInApplications" ChoicySB/Tweak.x && echo "SB patch present"
+          echo "=== substrate stub ==="
+          ls -la libsubstrate-roothide.tbd
+
+      - name: Install roothide substrate stub
+        run: |
+          mkdir -p /opt/theos/vendor/lib/iphone/roothide
+          cp libsubstrate-roothide.tbd /opt/theos/vendor/lib/iphone/roothide/libsubstrate.tbd
+          ls -la /opt/theos/vendor/lib/iphone/roothide/
+
+      - name: Build
+        id: build
+        continue-on-error: true
+        run: |
+          export THEOS=/opt/theos
+          make clean >/dev/null 2>&1 || true
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide \
+               ARCHS=arm64e TARGET=iphone:clang:latest:15.0 DEBUG=0 \
+               > build.log 2>&1
+          echo "make exit: $?"
+          tail -30 build.log
+
+      - name: Diagnose errors
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "=========== ERRORS ==========="
+          grep -nE "error:|fatal error:" build.log | head -50 || echo "(no explicit error lines)"
+          echo "=========== FIRST ERROR CONTEXT ==========="
+          grep -nE -A5 -B5 "error:" build.log | head -60 || true
+          echo "=========== TAIL ==========="
+          tail -60 build.log
+
+      - name: Collect artifact
+        if: steps.build.outcome == 'success'
+        run: |
+          mkdir -p output
+          find . -name "*.deb" -path "*packages*" -exec cp {} output/ \;
+          ls -la output/
+          for f in output/*.deb; do
+            echo "----- $f -----"
+            dpkg-deb -I "$f"
+            echo "----- files -----"
+            dpkg-deb -c "$f" | head -30
+            md5sum "$f"; shasum -a 256 "$f"
+          done
+
+      - name: Upload .deb
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: choicy-whitelist-deb
+          path: output/*.deb
+          retention-days: 30
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 7
+
+      - name: Fail job if build failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
