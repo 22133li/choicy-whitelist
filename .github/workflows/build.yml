@@ -79,7 +79,7 @@ jobs:
           # Choicy 的 ChoicyPrefs 依赖 AltList 框架（上游靠设备上的已安装版本，CI 需现编）
           cd external/AltList
           make clean >/dev/null 2>&1 || true
-          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide ARCHS=arm64e \
+          THEOS=/opt/theos make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide ARCHS=arm64e \
                TARGET=iphone:clang:latest:15.0 > /tmp/altlist.log 2>&1 || {
                  echo "=== AltList build failed ==="; tail -40 /tmp/altlist.log; exit 1; }
           echo "=== AltList built ==="
