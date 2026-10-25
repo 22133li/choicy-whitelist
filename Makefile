@@ -13,7 +13,6 @@ FINALPACKAGE = 1
 ROOTHIDE_DIR = $(CURDIR)/roothide-devkit
 export ADDITIONAL_CFLAGS += -I$(ROOTHIDE_DIR)
 export ADDITIONAL_LDFLAGS += -L$(ROOTHIDE_DIR)/roothide -lroothide
-export ADDITIONAL_LDFLAGS += -Wl,-rpath,@loader_path/.jbroot/Library/Frameworks
 
 include $(THEOS)/makefiles/common.mk
 

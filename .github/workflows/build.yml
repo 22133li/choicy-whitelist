@@ -48,6 +48,10 @@ jobs:
         run: |
           mkdir -p /opt/theos/vendor/lib/iphone/roothide
           cp libsubstrate-roothide.tbd /opt/theos/vendor/lib/iphone/roothide/libsubstrate.tbd
+          # 设了 THEOS_PACKAGE_SCHEME 后搜索路径只剩 vendor/lib/<target>/<scheme>，
+          # 而 Theos 对所有 iphone 目标无条件注入 -lroot，需把 libroot 暴露到 scheme 目录
+          ln -sf /opt/theos/vendor/lib/libroot.a /opt/theos/vendor/lib/iphone/roothide/libroot.a
+          ln -sf /opt/theos/vendor/lib/libroot_oldabi.a /opt/theos/vendor/lib/iphone/roothide/libroot_oldabi.a
           ls -la /opt/theos/vendor/lib/iphone/roothide/
 
       - name: Install roothide package scheme
