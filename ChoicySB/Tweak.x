@@ -64,13 +64,9 @@ BOOL CHWhitelistAppExistsInApplications(NSString *applicationID)
 	if (!proxy) return NO;
 
 	NSString *applicationsRoot = jbroot(@"/Applications");
-	NSString *bundlePath = nil;
 
 	// roothide 下 bundleURL 可能带 jbroot 前缀也可能不带，两种都试
 	NSString *proxyBundlePath = proxy.bundleURL.path;
-	if (!proxyBundlePath.length) {
-		proxyBundlePath = proxy.bundlePath;
-	}
 	if (!proxyBundlePath.length) return NO;
 
 	NSString *standardized = proxyBundlePath.stringByStandardizingPath;
@@ -78,19 +74,17 @@ BOOL CHWhitelistAppExistsInApplications(NSString *applicationID)
 
 	// SpringBoard / 系统 App 都在 /System 或 /private/var/containers 下，
 	// 只有越狱环境安装在 /Applications 下的 App 才会命中这里
+	NSString *relativePath = nil;
 	if ([standardized hasPrefix:[standardizedRoot stringByAppendingString:@"/"]]) {
-		bundlePath = [standardized substringFromIndex:standardizedRoot.length + 1];
+		relativePath = [standardized substringFromIndex:standardizedRoot.length + 1];
 	}
-	else {
-		NSString *plainRoot = @"/Applications/";
-		if ([standardized hasPrefix:plainRoot]) {
-			bundlePath = [standardized substringFromIndex:plainRoot.length];
-		}
+	else if ([standardized hasPrefix:@"/Applications/"]) {
+		relativePath = [standardized substringFromIndex:[@"/Applications/" length]];
 	}
 
-	if (!bundlePath.length) return NO;
+	if (!relativePath.length) return NO;
 	// 必须直接位于 /Applications 一级目录下
-	return ![bundlePath containsString:@"/"];
+	return ![relativePath containsString:@"/"];
 }
 
 BOOL choicy_shouldDisableTweakInjectionForApplication(NSString *applicationID)
