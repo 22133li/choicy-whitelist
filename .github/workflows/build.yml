@@ -88,17 +88,31 @@ jobs:
           echo "=== tbd content ==="
           cat /opt/theos/vendor/lib/iphone/roothide/AltList.framework/AltList.tbd
 
+      - name: Install private framework stubs
+        run: |
+          # Preferences 是私有框架：SDK/vendor 只有头文件，没有链接桩
+          mkdir -p /opt/theos/vendor/include/Preferences
+          echo "=== vendor headers present? ==="
+          ls /opt/theos/vendor/include/Preferences | head -5 || true
+          python3 scripts/gen_private_tbd.py
+          echo "=== stub content ==="
+          cat /opt/theos/vendor/lib/iphone/roothide/Preferences.framework/Preferences.tbd
+
       - name: Build
         id: build
         continue-on-error: true
         run: |
           export THEOS=/opt/theos
           make clean >/dev/null 2>&1 || true
+          set +e
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide \
                ARCHS=arm64e TARGET=iphone:clang:latest:15.0 DEBUG=0 \
                > build.log 2>&1
-          echo "make exit: $?"
-          tail -30 build.log
+          RC=$?
+          set -e
+          echo "make exit: $RC"
+          tail -40 build.log
+          exit $RC
 
       - name: Diagnose errors
         if: steps.build.outcome == 'failure'
