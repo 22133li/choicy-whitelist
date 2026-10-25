@@ -126,6 +126,8 @@ jobs:
         run: |
           export THEOS=/opt/theos
           make clean >/dev/null 2>&1 || true
+          # dpkg-deb 要求 maintainer scripts 权限 0555~0775，git 不保留该位
+          chmod 0755 layout/DEBIAN/postinst layout/DEBIAN/postrm 2>/dev/null || true
           set +e
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide \
                ARCHS=arm64e TARGET=iphone:clang:latest:15.0 DEBUG=0 \
