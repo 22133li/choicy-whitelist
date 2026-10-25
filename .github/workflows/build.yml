@@ -24,6 +24,9 @@ jobs:
           brew install ldid dpkg
           echo "$(brew --prefix)/bin" >> $GITHUB_PATH
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
+          # vendor/include 是子模块，必须显式拉取，否则缺 CydiaSubstrate/substrate.h 头文件
+          cd /opt/theos && sudo git submodule update --init --recursive 2>&1 | tail -5
+          cd -
           curl -sL https://github.com/theos/sdks/archive/master.tar.gz | tar -xz -C /tmp
           sudo cp -r /tmp/sdks-master/*.sdk /opt/theos/sdks/ 2>/dev/null || true
           sudo chown -R $(id -u):$(id -g) /opt/theos
@@ -43,6 +46,15 @@ jobs:
           grep -q "CHWhitelistAppExistsInApplications" ChoicySB/Tweak.x && echo "SB patch present"
           echo "=== substrate stub ==="
           ls -la libsubstrate-roothide.tbd
+
+      - name: Verify Theos headers
+        run: |
+          echo "=== CydiaSubstrate header ==="
+          ls -la /opt/theos/vendor/include/CydiaSubstrate/ 2>&1 | head -5
+          echo "=== substrate.h ==="
+          head -3 /opt/theos/vendor/include/substrate.h 2>&1
+          echo "=== vendor/include 是否为空 ==="
+          ls /opt/theos/vendor/include | head -5
 
       - name: Install roothide substrate stub
         run: |
