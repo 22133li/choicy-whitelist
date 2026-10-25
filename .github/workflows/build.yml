@@ -47,14 +47,22 @@ jobs:
           echo "=== substrate stub ==="
           ls -la libsubstrate-roothide.tbd
 
-      - name: Verify Theos headers
+      - name: Fix CydiaSubstrate header layout
         run: |
-          echo "=== CydiaSubstrate header ==="
-          ls -la /opt/theos/vendor/include/CydiaSubstrate/ 2>&1 | head -5
-          echo "=== substrate.h ==="
-          head -3 /opt/theos/vendor/include/substrate.h 2>&1
-          echo "=== vendor/include 是否为空 ==="
-          ls /opt/theos/vendor/include | head -5
+          # theos/headers 把 CydiaSubstrate.h 放在根目录，但 substrate.h 期望 <CydiaSubstrate/CydiaSubstrate.h>
+          INC=/opt/theos/vendor/include
+          if [ -f "$INC/CydiaSubstrate.h" ] && [ ! -d "$INC/CydiaSubstrate" ]; then
+            mkdir -p "$INC/CydiaSubstrate"
+            ln -sf "$INC/CydiaSubstrate.h" "$INC/CydiaSubstrate/CydiaSubstrate.h"
+          fi
+          echo "=== verify ==="
+          ls -la "$INC/CydiaSubstrate/" 2>&1 | head -5
+          head -3 "$INC/substrate.h" 2>&1
+          # 真实编译验证：能被预处理通过才算数
+          echo '#import <substrate.h>' > /tmp/subcheck.m
+          clang -fsyntax-only -x objective-c -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
+                -I"$INC" -arch arm64e -miphoneos-version-min=15.0 /tmp/subcheck.m \
+            && echo "substrate.h OK"
 
       - name: Install roothide substrate stub
         run: |
