@@ -15,12 +15,21 @@ import sys
 
 FRAMEWORKS = {
     "Preferences": "/opt/theos/vendor/include/Preferences",
+    "BackBoardServices": "/opt/theos/vendor/include/BackBoardServices",
 }
 
-# 头文件里没有、但 ChoicyPrefs 实际引用了的类
+# 头文件里没有、但实际引用的类
 EXTRA_CLASSES = {
     "Preferences": ["PSEditableListController"],
 }
+
+# 头文件里没有、或纯 C 符号的导出（BackBoardServices 是 C 函数，不走 objc-classes）
+EXTRA_SYMBOLS = {
+    "BackBoardServices": ["BKSTerminateApplicationForReasonAndReportWithDescription"],
+}
+
+# C 函数框架：导出 symbols 而非 objc-classes
+C_FRAMEWORKS = {"BackBoardServices"}
 
 INTERFACE_RE = re.compile(r"@interface\s+([A-Za-z_]\w*)\s*(?::\s*([A-Za-z_]\w*))?[^\n{]*\{", re.S)
 
@@ -76,7 +85,7 @@ def collect(header_dir, extra_classes):
     return classes, ivars
 
 
-def build_tbd(framework, classes, ivars):
+def build_tbd(framework, classes, ivars, extra_symbols=(), c_framework=False):
     install_name = f"/System/Library/PrivateFrameworks/{framework}.framework/{framework}"
     lines = [
         "--- !tapi-tbd",
@@ -88,13 +97,20 @@ def build_tbd(framework, classes, ivars):
         "compatibility-version: 1.0.0",
         "exports:",
         "  - targets:         [ arm64e-ios ]",
-        f"    objc-classes:    [ {', '.join(sorted(classes))} ]",
     ]
-    ivar_syms = sorted(
-        f"{cls}.{iv}" for cls, vs in ivars.items() for iv in vs
-    )
+    if c_framework:
+        syms = sorted(f"_{s}" for s in extra_symbols)
+        if syms:
+            lines.append(f"    symbols:         [ {', '.join(syms)} ]")
+        lines.append("...")
+        return "\n".join(lines) + "\n"
+
+    lines.append(f"    objc-classes:    [ {', '.join(sorted(classes))} ]")
+    ivar_syms = sorted(f"{cls}.{iv}" for cls, vs in ivars.items() for iv in vs)
     if ivar_syms:
         lines.append(f"    objc-ivars:      [ {', '.join(ivar_syms)} ]")
+    if extra_symbols:
+        lines.append(f"    symbols:         [ {', '.join('_' + s for s in sorted(extra_symbols))} ]")
     lines.append("...")
     return "\n".join(lines) + "\n"
 
@@ -106,8 +122,11 @@ def main():
 
     for framework in FRAMEWORKS:
         header_dir = os.path.join(hdr_root, framework)
+        is_c = framework in C_FRAMEWORKS
+        extra_symbols = EXTRA_SYMBOLS.get(framework, [])
         classes, ivars = collect(header_dir, EXTRA_CLASSES.get(framework, []))
-        if not classes:
+
+        if not classes and not extra_symbols:
             print(f"[{framework}] nothing found under {header_dir}", file=sys.stderr)
             failures += 1
             continue
@@ -116,10 +135,10 @@ def main():
         os.makedirs(fw_dir, exist_ok=True)
         path = os.path.join(fw_dir, f"{framework}.tbd")
         with open(path, "w") as f:
-            f.write(build_tbd(framework, classes, ivars))
-        print(f"[{framework}] {path}")
-        print(f"    classes({len(classes)}): {', '.join(sorted(classes))}")
-        print(f"    ivars: {sum(len(v) for v in ivars.values())}")
+            f.write(build_tbd(framework, classes, ivars, extra_symbols, is_c))
+        print(f"[{framework}] {path}"
+              + (f"  (C symbols: {len(extra_symbols)})" if is_c
+                 else f"  (classes: {len(classes)}, ivars: {sum(len(v) for v in ivars.values())})"))
 
     return 1 if failures else 0
 
