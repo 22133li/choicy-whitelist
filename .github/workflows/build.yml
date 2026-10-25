@@ -157,9 +157,15 @@ jobs:
           for f in output/*.deb; do
             echo "----- $f -----"
             dpkg-deb -I "$f"
-            echo "----- files -----"
-            dpkg-deb -c "$f" | head -30
-            md5sum "$f"; shasum -a 256 "$f"
+            echo "----- files (first 25) -----"
+            dpkg-deb -c "$f" > /tmp/debcontents.txt 2>&1
+            head -25 /tmp/debcontents.txt
+            echo "----- total entries -----"
+            wc -l < /tmp/debcontents.txt
+            echo "----- hashes -----"
+            md5 "$f"; shasum -a 256 "$f"
+            echo "----- size -----"
+            stat -f "%z bytes" "$f"
           done
 
       - name: Upload .deb
