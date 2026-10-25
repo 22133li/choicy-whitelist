@@ -50,6 +50,18 @@ jobs:
           cp libsubstrate-roothide.tbd /opt/theos/vendor/lib/iphone/roothide/libsubstrate.tbd
           ls -la /opt/theos/vendor/lib/iphone/roothide/
 
+      - name: Install roothide package scheme
+        run: |
+          # 标准 Theos 没有 roothide scheme，补一个 vendor/mod 模块
+          mkdir -p /opt/theos/vendor/mod/roothide/package
+          cp theos-vendor/roothide/package.mk /opt/theos/vendor/mod/roothide/package.mk
+          cp theos-vendor/roothide/package/deb.mk /opt/theos/vendor/mod/roothide/package/deb.mk
+          echo "=== installed scheme files ==="
+          find /opt/theos/vendor/mod/roothide -type f
+          echo "=== content ==="
+          cat /opt/theos/vendor/mod/roothide/package.mk
+          cat /opt/theos/vendor/mod/roothide/package/deb.mk
+
       - name: Build
         id: build
         continue-on-error: true
