@@ -62,6 +62,14 @@ jobs:
           cat /opt/theos/vendor/mod/roothide/package.mk
           cat /opt/theos/vendor/mod/roothide/package/deb.mk
 
+      - name: Generate musttail assembly
+        run: |
+          # Tweak.s 依赖 gen.<arch>.s，需用支持 __attribute__((musttail)) 的 clang 现场生成
+          chmod +x gen_asm.sh
+          ./gen_asm.sh
+          echo "=== generated ==="
+          ls -la gen.*.s
+
       - name: Build
         id: build
         continue-on-error: true
