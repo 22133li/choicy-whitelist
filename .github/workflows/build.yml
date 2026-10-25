@@ -49,16 +49,13 @@ jobs:
 
       - name: Fix CydiaSubstrate header layout
         run: |
-          # theos/headers 把 CydiaSubstrate.h 放在根目录，但 substrate.h 期望 <CydiaSubstrate/CydiaSubstrate.h>
+          # theos/headers 的 CydiaSubstrate.h 只是一层转发（#include <CydiaSubstrate/CydiaSubstrate.h>），
+          # 直接软链会自己套自己。这里用仓库内的最小声明文件补齐。
           INC=/opt/theos/vendor/include
-          if [ -f "$INC/CydiaSubstrate.h" ] && [ ! -d "$INC/CydiaSubstrate" ]; then
-            mkdir -p "$INC/CydiaSubstrate"
-            ln -sf "$INC/CydiaSubstrate.h" "$INC/CydiaSubstrate/CydiaSubstrate.h"
-          fi
+          mkdir -p "$INC/CydiaSubstrate"
+          cp scripts/CydiaSubstrate.h "$INC/CydiaSubstrate/CydiaSubstrate.h"
           echo "=== verify ==="
-          ls -la "$INC/CydiaSubstrate/" 2>&1 | head -5
           head -3 "$INC/substrate.h" 2>&1
-          # 真实编译验证：能被预处理通过才算数
           echo '#import <substrate.h>' > /tmp/subcheck.m
           clang -fsyntax-only -x objective-c -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
                 -I"$INC" -arch arm64e -miphoneos-version-min=15.0 /tmp/subcheck.m \
