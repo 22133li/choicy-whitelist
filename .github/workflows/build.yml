@@ -76,21 +76,17 @@ jobs:
 
       - name: Build and install AltList
         run: |
-          # Choicy 的 ChoicyPrefs 依赖 AltList 框架（上游靠设备上的已安装版本，CI 需现编）
-          cd external/AltList
-          make clean >/dev/null 2>&1 || true
-          THEOS=/opt/theos make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide ARCHS=arm64e \
-               TARGET=iphone:clang:latest:15.0 > /tmp/altlist.log 2>&1 || {
-                 echo "=== AltList build failed ==="; tail -40 /tmp/altlist.log; exit 1; }
-          echo "=== AltList built ==="
-          find .theos -name "AltList.framework" -type d | head -3
-          FRAMEWORK=$(find .theos -name "AltList.framework" -type d | head -1)
-          [ -n "$FRAMEWORK" ] || { echo "framework not found"; exit 1; }
-          # 装到 Theos vendor，供 ChoicyPrefs 的 EXTRA_FRAMEWORKS 使用
-          mkdir -p /opt/theos/vendor/lib/iphone/roothide
-          cp -R "$FRAMEWORK" /opt/theos/vendor/lib/iphone/roothide/
-          ls -la /opt/theos/vendor/lib/iphone/roothide/AltList.framework/
+          # Choicy 的 ChoicyPrefs 依赖 AltList 头文件与符号。
+          # AltList 自身需要 Preferences 私有框架才能链接，因此只提供 headers + tbd 桩。
+          mkdir -p /opt/theos/vendor/lib/iphone/roothide/AltList.framework/Headers
+          cp external/AltList/*.h /opt/theos/vendor/lib/iphone/roothide/AltList.framework/Headers/
+          rm -f /opt/theos/vendor/lib/iphone/roothide/AltList.framework/Headers/AltList.h
+          echo "=== headers installed ==="
           ls /opt/theos/vendor/lib/iphone/roothide/AltList.framework/Headers | head -5
+          echo "=== generate tbd ==="
+          python3 scripts/gen_altlist_tbd.py
+          echo "=== tbd content ==="
+          cat /opt/theos/vendor/lib/iphone/roothide/AltList.framework/AltList.tbd
 
       - name: Build
         id: build
