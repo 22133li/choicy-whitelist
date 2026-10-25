@@ -7,7 +7,7 @@ ChoicyPrefs_INSTALL_PATH = /Library/PreferenceBundles
 ChoicyPrefs_FRAMEWORKS = UIKit
 ChoicyPrefs_PRIVATE_FRAMEWORKS = Preferences MobileCoreServices
 ChoicyPrefs_EXTRA_FRAMEWORKS = AltList
-ChoicyPrefs_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -I../external/ChOma/src -I../external/litehook/src -I$(ROOTHIDE_DIR)
+ChoicyPrefs_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -I../external/ChOma/src -I../external/litehook/src -I$(ROOTHIDE_DIR) -I../external/altlist-headers
 
 include $(THEOS_MAKE_PATH)/bundle.mk
 

@@ -74,6 +74,24 @@ jobs:
           echo "=== generated ==="
           ls -la gen.*.s
 
+      - name: Build and install AltList
+        run: |
+          # Choicy 的 ChoicyPrefs 依赖 AltList 框架（上游靠设备上的已安装版本，CI 需现编）
+          cd external/AltList
+          make clean >/dev/null 2>&1 || true
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide ARCHS=arm64e \
+               TARGET=iphone:clang:latest:15.0 > /tmp/altlist.log 2>&1 || {
+                 echo "=== AltList build failed ==="; tail -40 /tmp/altlist.log; exit 1; }
+          echo "=== AltList built ==="
+          find .theos -name "AltList.framework" -type d | head -3
+          FRAMEWORK=$(find .theos -name "AltList.framework" -type d | head -1)
+          [ -n "$FRAMEWORK" ] || { echo "framework not found"; exit 1; }
+          # 装到 Theos vendor，供 ChoicyPrefs 的 EXTRA_FRAMEWORKS 使用
+          mkdir -p /opt/theos/vendor/lib/iphone/roothide
+          cp -R "$FRAMEWORK" /opt/theos/vendor/lib/iphone/roothide/
+          ls -la /opt/theos/vendor/lib/iphone/roothide/AltList.framework/
+          ls /opt/theos/vendor/lib/iphone/roothide/AltList.framework/Headers | head -5
+
       - name: Build
         id: build
         continue-on-error: true
