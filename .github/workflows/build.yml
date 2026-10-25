@@ -65,6 +65,11 @@ jobs:
         run: |
           mkdir -p /opt/theos/vendor/lib/iphone/roothide
           cp libsubstrate-roothide.tbd /opt/theos/vendor/lib/iphone/roothide/libsubstrate.tbd
+          # -framework CydiaSubstrate 需要 CydiaSubstrate.framework 位于 scheme 搜索路径下
+          if [ -d /opt/theos/vendor/lib/CydiaSubstrate.framework ]; then
+            ln -sfn /opt/theos/vendor/lib/CydiaSubstrate.framework \
+                    /opt/theos/vendor/lib/iphone/roothide/CydiaSubstrate.framework
+          fi
           # 设了 THEOS_PACKAGE_SCHEME 后搜索路径只剩 vendor/lib/<target>/<scheme>，
           # 而 Theos 对所有 iphone 目标无条件注入 -lroot，需把 libroot 暴露到 scheme 目录
           ln -sf /opt/theos/vendor/lib/libroot.a /opt/theos/vendor/lib/iphone/roothide/libroot.a
@@ -107,13 +112,13 @@ jobs:
 
       - name: Install private framework stubs
         run: |
-          # Preferences 是私有框架：SDK/vendor 只有头文件，没有链接桩
+          # Preferences / BackBoardServices 是私有框架：SDK/vendor 只有头文件，没有链接桩
           mkdir -p /opt/theos/vendor/include/Preferences
-          echo "=== vendor headers present? ==="
-          ls /opt/theos/vendor/include/Preferences | head -5 || true
           python3 scripts/gen_private_tbd.py
-          echo "=== stub content ==="
-          cat /opt/theos/vendor/lib/iphone/roothide/Preferences.framework/Preferences.tbd
+          echo "=== Preferences stub ==="
+          head -9 /opt/theos/vendor/lib/iphone/roothide/Preferences.framework/Preferences.tbd
+          echo "=== BackBoardServices stub ==="
+          cat /opt/theos/vendor/lib/iphone/roothide/BackBoardServices.framework/BackBoardServices.tbd
 
       - name: Build
         id: build

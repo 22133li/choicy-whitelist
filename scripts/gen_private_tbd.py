@@ -85,8 +85,17 @@ def collect(header_dir, extra_classes):
     return classes, ivars
 
 
+CORRECTED_INSTALL_NAMES = {
+    # CydiaSubstrate 是越狱提供的框架，不在 PrivateFrameworks 下
+    "CydiaSubstrate": "/usr/lib/libsubstrate.dylib",
+}
+
+
 def build_tbd(framework, classes, ivars, extra_symbols=(), c_framework=False):
-    install_name = f"/System/Library/PrivateFrameworks/{framework}.framework/{framework}"
+    install_name = CORRECTED_INSTALL_NAMES.get(
+        framework,
+        f"/System/Library/PrivateFrameworks/{framework}.framework/{framework}",
+    )
     lines = [
         "--- !tapi-tbd",
         "tbd-version:     4",
